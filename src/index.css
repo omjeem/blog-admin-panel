@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+ol {
+    list-style-type: decimal;
+    padding-left: 20px;
+}
+
+ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+
+.ql-align-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: start !important;
+    text-align: left !important;
+}
+
+.ql-align-center {
+    display: flex;
+    flex-direction: column;
+    justify-content: center !important;
+    text-align: center !important;
+}
+
+.ql-align-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: right;
+    text-align: right !important;
+}
+
+.ql-align-justify {
+    display: flex;
+    flex-direction: column;
+    /* justify-content: space-between; */
+    /* text-align: justify !important; */
+}
+
+.ql-align-center ol {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+}
+
+
+
+.ql-video {
+    margin-top: 10px;
+    width: 100%;
+    height: 315px;
+}
+
+.ql-align-center {
+    font-size: 16px;
+    margin-top: 3px;
+    color: #666;
+    text-align: center;
+    margin-top: 5px;
+    outline: none;
+    cursor: text;
+}
