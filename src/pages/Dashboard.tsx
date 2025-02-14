@@ -35,10 +35,10 @@ export default function Dashboard() {
           title="Comments"
           value="2,345"
           icon={MessageSquare}
-          trend={{ value: 8, isPositive: true }}
+          trend={{ value: 8, isPositive: true }}  
         />
         <StatCard
-          title="Categories & Tags"
+          title="Authors & Tags"
           value="48"
           icon={Tags}
           trend={{ value: 2, isPositive: true }}

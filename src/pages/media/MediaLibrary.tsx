@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Upload, Search, Filter, Image as ImageIcon, Film, FileText, Edit, Trash2, Plus, X } from 'lucide-react';
 import type { MediaItem } from '../../types';
+import axios from 'axios';
+import { BACKEND_URL } from '../../utils';
 
 interface MediaFilter {
   search: string;
@@ -10,22 +12,22 @@ interface MediaFilter {
 
 const mediaItems: MediaItem[] = [
   {
-    id: '1',
+    _id: '1',
     url: 'https://images.unsplash.com/photo-1661956602116-aa6865609028?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80',
-    type: 'image',
     title: 'Nature Landscape',
+    type: "image",
     altText: 'Beautiful mountain landscape',
-    uploadDate: '2024-03-10',
+    uploadedAt: '2024-03-10',
     size: '2.4 MB',
     dimensions: '2400x1600'
   },
   {
-    id: '2',
+    _id: '2',
     url: 'https://images.unsplash.com/photo-1682687982501-1e58ab814714?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80',
-    type: 'image',
     title: 'City View',
+    type: "image",
     altText: 'Modern city skyline',
-    uploadDate: '2024-03-09',
+    uploadedAt: '2024-03-09',
     size: '1.8 MB',
     dimensions: '2000x1333'
   }
@@ -37,12 +39,17 @@ export default function MediaLibrary() {
     type: 'all',
     sortBy: 'date'
   });
+  const [mediaImages, setMediaImages] = useState<MediaItem[]>(mediaItems);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState<MediaItem | null>(null);
 
-  const filteredMedia = mediaItems.filter(item => {
+  const [newMediaTitle, setNewMediaTitle] = useState('Title');
+  const [newMediaAltText, setNewMediaAltText] = useState('Alt Text');
+  const [newMediaFile, setNewMediaFile] = useState<File | null>(null);
+
+  const filteredMedia = mediaImages.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(filter.search.toLowerCase());
     const matchesType = filter.type === 'all' || item.type === filter.type;
     return matchesSearch && matchesType;
@@ -51,11 +58,33 @@ export default function MediaLibrary() {
       case 'name':
         return a.title.localeCompare(b.title);
       case 'date':
-        return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
+        return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
       default:
         return 0;
     }
   });
+
+  function showMediaUpdateModel(){
+    setNewMediaAltText("")
+    setNewMediaTitle("")
+    setNewMediaFile(null)
+    setShowUploadModal(true)
+  }
+
+  async function fetchMediaImages() {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/image`)
+      const imagedata = response.data.data
+      setMediaImages(imagedata)
+      console.log(response.data)
+    } catch (e: any) {
+      console.log("Error while fetching images", e)
+    }
+  }
+
+  useEffect(() => {
+    fetchMediaImages()
+  }, [])
 
   const handleSelect = (id: string) => {
     setSelectedItems(prev =>
@@ -70,13 +99,81 @@ export default function MediaLibrary() {
     setShowEditModal(true);
   };
 
-  const handleDelete = (ids: string[]) => {
-    if (confirm(`Are you sure you want to delete ${ids.length} item(s)?`)) {
+  const handleDelete = async (idArray: string[]) => {
+    if (confirm(`Are you sure you want to delete ${idArray.length} item(s)?`)) {
       // Here you would typically make an API call to delete the items
-      console.log('Deleting items:', ids);
+      try {
+        const response = await axios.post(`${BACKEND_URL}/image/delete`, { idArray }, {
+          headers: {
+            'Content-Type': 'application/json',
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        })
+        console.log("Deleted successfully", response.data)
+        setMediaImages(prev => prev.filter(item => !idArray.includes(item._id)))
+      } catch (e: any) {
+        console.log("Error while deleting media image ", e)
+      }
+      console.log('Deleting items:', idArray);
       setSelectedItems([]);
     }
   };
+
+  async function saveChangesHandler() {
+    if (editingItem) {
+      try {
+        const response = await axios.put(`${BACKEND_URL}/image/${editingItem._id}`,
+          {
+            title: editingItem.title,
+            altText: editingItem.altText
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+          })
+        setMediaImages(prev => prev.map(item => item._id === editingItem._id ? response.data.data : item))
+        console.log("Changes saved successfully", response.data.data)
+      } catch (Err: any) {
+        console.log("Error while saving changes", Err)
+        alert("Error while saving changes")
+      } finally {
+        console.log("Changes saved successfully")
+        setShowEditModal(false);
+      }
+    }
+  }
+
+  async function fileUploadHandler() {
+    if(!newMediaFile){
+      alert("Please select a file to upload")
+      return
+    }
+    if(!newMediaTitle || newMediaTitle.trim() === "" || !newMediaAltText || newMediaAltText.trim() === ""){
+      alert("Please enter a title and alt text")
+      return
+    }
+    const formData = new FormData()
+    formData.append('image', newMediaFile)
+    formData.append('title', newMediaTitle)
+    formData.append('altText', newMediaAltText)
+    try{
+      const response = await axios.post(`${BACKEND_URL}/image/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        }
+      })
+      const fileResponseData = response.data.data
+      console.log("File uploaded successfully", fileResponseData)
+      setMediaImages(prev => [...prev, fileResponseData])
+    }catch(Err : any){
+      console.log("Error while uploading file", Err)
+    }finally{
+      setShowUploadModal(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -93,7 +190,7 @@ export default function MediaLibrary() {
             </button>
           )}
           <button
-            onClick={() => setShowUploadModal(true)}
+            onClick={showMediaUpdateModel}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             <Upload className="h-4 w-4 mr-2" />
@@ -142,10 +239,9 @@ export default function MediaLibrary() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredMedia.map((item) => (
           <div
-            key={item.id}
-            className={`group relative bg-white rounded-lg shadow-sm overflow-hidden ${
-              selectedItems.includes(item.id) ? 'ring-2 ring-indigo-500' : ''
-            }`}
+            key={item._id}
+            className={`group relative bg-white rounded-lg shadow-sm overflow-hidden ${selectedItems.includes(item._id) ? 'ring-2 ring-indigo-500' : ''
+              }`}
           >
             <div className="aspect-video relative">
               {item.type === 'image' ? (
@@ -173,7 +269,7 @@ export default function MediaLibrary() {
                       <Edit className="h-4 w-4 text-gray-600" />
                     </button>
                     <button
-                      onClick={() => handleDelete([item.id])}
+                      onClick={() => handleDelete([item._id])}
                       className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-100"
                     >
                       <Trash2 className="h-4 w-4 text-red-600" />
@@ -184,8 +280,8 @@ export default function MediaLibrary() {
               <div className="absolute top-2 left-2">
                 <input
                   type="checkbox"
-                  checked={selectedItems.includes(item.id)}
-                  onChange={() => handleSelect(item.id)}
+                  checked={selectedItems.includes(item._id)}
+                  onChange={() => handleSelect(item._id)}
                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded opacity-0 group-hover:opacity-100 checked:opacity-100"
                 />
               </div>
@@ -197,13 +293,13 @@ export default function MediaLibrary() {
                 <span>{item.dimensions}</span>
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                {new Date(item.uploadDate).toLocaleDateString()}
+                {new Date(item.uploadedAt).toLocaleDateString()}
               </p>
             </div>
           </div>
         ))}
         <button
-          onClick={() => setShowUploadModal(true)}
+          onClick={showMediaUpdateModel}
           className="flex aspect-video items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-600"
         >
           <div className="text-center">
@@ -236,6 +332,38 @@ export default function MediaLibrary() {
                         <X className="h-5 w-5" />
                       </button>
                     </div>
+                    <div className='space-y-4'>
+                      <div>
+                        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                          Title
+                        </label>
+                        <input
+                          type="text"
+                          id="title"
+                          name="title"
+                          value={newMediaTitle}
+                          onChange={(e) => {
+                            setNewMediaTitle(e.target.value);
+                          }}
+                          className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="alt-text" className="block text-sm font-medium text-gray-700">
+                          Alt Text
+                        </label>
+                        <input
+                          type="text"
+                          id="alt-text"
+                          name="altText"
+                          value={newMediaAltText}
+                          onChange={(e) => {
+                            setNewMediaAltText(e.target.value);
+                          }}
+                          className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      </div>
+                    </div>
                     <div
                       className="mt-4 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
                       onDragOver={(e) => e.preventDefault()}
@@ -257,10 +385,8 @@ export default function MediaLibrary() {
                               name="file-upload"
                               type="file"
                               className="sr-only"
-                              multiple
                               onChange={(e) => {
-                                // Handle file selection
-                                console.log('Files:', e.target.files);
+                                setNewMediaFile(e.target.files?.[0] || null);
                               }}
                             />
                           </label>
@@ -270,6 +396,12 @@ export default function MediaLibrary() {
                           PNG, JPG, GIF up to 10MB
                         </p>
                       </div>
+                    </div>
+                    <div className='flex justify-center'>
+                      <button
+                        onClick={fileUploadHandler}
+                        className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      >Upload</button>
                     </div>
                   </div>
                 </div>
@@ -349,11 +481,7 @@ export default function MediaLibrary() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            // Here you would typically make an API call to update the item
-                            console.log('Saving item:', editingItem);
-                            setShowEditModal(false);
-                          }}
+                          onClick={saveChangesHandler}
                           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                         >
                           Save Changes

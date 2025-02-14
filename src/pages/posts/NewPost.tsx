@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Save,
     Image,
@@ -24,102 +24,77 @@ import {
     Linkedin,
     Globe
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import RichTextEditor from '../../components/Editor/TextEditor';
+import axios from 'axios';
+import { BACKEND_URL } from '../../utils';
+import { MediaItem } from '../../types';
+import { MultiSelectCombobox } from '../../components/MultiSelectComboBox';
+import toast, { Toaster } from 'react-hot-toast';
+import Toggle from '../../components/Toggle';
 
-interface PostForm {
-    title: string;
-    slug: string;
-    content: string;
-    excerpt: string;
-    featuredImage: string;
-    categories: string[];
-    tags: string[];
-    seoTitle: string;
-    seoDescription: string;
-    status: 'draft' | 'published';
-    author: {
-        name: string;
-        socials: {
-            twitter: string;
-            linkedin: string;
-            website: string;
-        }
-    }
+export enum POST_STATUS {
+    PUBLISHED = "published",
+    DRAFT = "draft",
 }
 
-interface FormatAction {
-    icon: React.ElementType;
-    label: string;
-    command: string;
-    value?: string;
+
+export interface PostForm {
+    _id?: string;
+    title: string;
+    description: string;
+    slug: string;
+    featuredImage: string;
+    content: string;
+    status: POST_STATUS;
+    views: number;
+    isFeatured: boolean;
+    likeCount: number;
+    dislikeCount: number;
+    createdAt?: Date | null;
+    updatedAt?: Date | null;
+    tags: Tag[];
+    authors: Author[]
+    seoTitle: string;
+    seoDescription: string;
+    isDeleted?: boolean;
+}
+
+interface Tag {
+    name: string;
+    slug: string;
+    isPrimary: boolean;
+    blogs: string[];
+    createdAt: Date;
+}
+
+interface Author {
+    blogs?: [String],
+    createdAt?: Date,
+    isAdmin?: Boolean,
+    name: String,
+    _id?: String
 }
 
 const initialPost: PostForm = {
+    _id: "",
     title: '',
+    description: '',
     slug: '',
-    content: '',
-    excerpt: '',
     featuredImage: '',
-    categories: [],
+    content: '',
+    status: POST_STATUS.DRAFT,
+    views: 0,
+    isFeatured: false,
+    likeCount: 0,
+    dislikeCount: 0,
     tags: [],
+    authors: [],
+    isDeleted: false,
     seoTitle: '',
     seoDescription: '',
-    status: 'draft',
-    author: {
-        name: '',
-        socials: {
-            twitter: '',
-            linkedin: '',
-            website: ''
-        }
-    }
 };
 
-const formatActions: FormatAction[] = [
-    { icon: Bold, label: 'Bold', command: 'bold' },
-    { icon: Italic, label: 'Italic', command: 'italic' },
-    { icon: Heading1, label: 'Heading 1', command: 'formatBlock', value: '<h1>' },
-    { icon: Heading2, label: 'Heading 2', command: 'formatBlock', value: '<h2>' },
-    { icon: List, label: 'Bullet List', command: 'insertUnorderedList' },
-    { icon: ListOrdered, label: 'Numbered List', command: 'insertOrderedList' },
-    { icon: AlignLeft, label: 'Align Left', command: 'justifyLeft' },
-    { icon: AlignCenter, label: 'Align Center', command: 'justifyCenter' },
-    { icon: AlignRight, label: 'Align Right', command: 'justifyRight' },
-    { icon: Quote, label: 'Quote', command: 'formatBlock', value: '<blockquote>' },
-    { icon: Code, label: 'Code', command: 'formatBlock', value: '<pre>' }
-];
-
-const availableCategories = [
-    { id: '1', name: 'Technology' },
-    { id: '2', name: 'Writing' },
-    { id: '3', name: 'Development' },
-    { id: '4', name: 'Design' }
-];
-
-const availableTags = [
-    { id: '1', name: 'React' },
-    { id: '2', name: 'JavaScript' },
-    { id: '3', name: 'Web Development' },
-    { id: '4', name: 'UI/UX' }
-];
-
-const sampleMediaItems = [
-    {
-        id: '1',
-        url: 'https://images.unsplash.com/photo-1661956602116-aa6865609028',
-        type: 'image',
-        title: 'Sample Image 1',
-        dimensions: '2400x1600'
-    },
-    {
-        id: '2',
-        url: 'https://images.unsplash.com/photo-1682687982501-1e58ab814714',
-        type: 'image',
-        title: 'Sample Image 2',
-        dimensions: '2400x1600'
-    }
-];
 
 type MediaInsertMode = 'featured' | 'content';
 
@@ -128,15 +103,78 @@ export default function NewPost() {
     const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
     const [showMediaLibrary, setShowMediaLibrary] = useState(false);
     const [mediaInsertMode, setMediaInsertMode] = useState<MediaInsertMode>('content');
-    const editorRef = useRef<HTMLDivElement>(null);
+    const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+
+    const [isUpdate, setIsUpdate] = useState(false);
+
+    const [allAuthors, setAllAuthors] = useState<string[]>([]);
+    const [allTags, setAllTags] = useState<string[]>([]);
+
+
+    async function fetchPostDetails() {
+        const url = window.location.href;
+        if (!url.endsWith("/admin/posts/new") || !url.endsWith("/admin/posts/new/")) {
+            const postId = url.split("/").pop();
+            console.log("Post ID is ", postId)
+            try {
+                const response = await axios.get(`${BACKEND_URL}/blogs/${postId}`, {
+                    headers : {
+                        "Authorization": `Bearer ${localStorage.getItem('token')}`
+                    }
+                })
+                const blogData = response.data.response
+                console.log("Response is ", blogData)
+
+                setIsUpdate(true)
+                setPost(blogData)
+            } catch (err: any) {
+                console.log("Error while fetching the post", err)
+            }
+
+        }
+    }
+
+    useEffect(() => {
+        fetchPostDetails()
+    }, [])
+
+    async function fetchAllTags() {
+        try {
+            const response = await axios.get(`${BACKEND_URL}/tags`)
+            const tagsData = response.data.response
+            setAllTags(tagsData)
+        } catch (Err: any) {
+            console.log("Error while fetching the tags", Err)
+        }
+    }
+
+    async function fetchAllAuthors() {
+        try {
+            const response = await axios.get(`${BACKEND_URL}/authors`)
+            const authorsData = response.data.response
+            setAllAuthors(authorsData)
+        } catch (Err: any) {
+            console.log("Error while fetching the tags", Err)
+        }
+    }
+    useEffect(() => {
+        fetchAllTags()
+        fetchAllAuthors()
+    }, [])
+    // const editorRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
-    // console.log("post >> ",editorRef)
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
     ) => {
         const { name, value } = e.target;
-        setPost(prev => ({ ...prev, [name]: value }));
+        console.log("Name is ", name, "Value is ", value)
+        if (name === 'title') {
+            const slug = generateSlug(value);
+            setPost(prev => ({ ...prev, title: value, slug: slug }));
+        } else {
+            setPost(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleMultiSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -147,42 +185,27 @@ export default function NewPost() {
         setPost(prev => ({ ...prev, [name]: values }));
     };
 
-    const generateSlug = () => {
-        const slug = post.title
+    async function fetchMediaImages() {
+        try {
+            const response = await axios.get(`${BACKEND_URL}/image`)
+            const imagedata = response.data.data
+            setMediaItems(imagedata)
+            console.log(response.data)
+        } catch (e: any) {
+            console.log("Error while fetching images", e)
+        }
+    }
+
+
+    useEffect(() => {
+        fetchMediaImages()
+    }, [])
+
+    const generateSlug = (data: string) => {
+        return data
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/(^-|-$)/g, '');
-        setPost(prev => ({ ...prev, slug }));
-    };
-
-    const handleFormat = (action: FormatAction) => {
-        if (!editorRef.current) return;
-
-        // Save the current selection
-        const selection = window.getSelection();
-        const range = selection?.getRangeAt(0);
-
-        // Focus the editor
-        editorRef.current.focus();
-
-        // Restore the selection if it exists
-        if (range) {
-            selection?.removeAllRanges();
-            selection?.addRange(range);
-        }
-
-        // Apply the formatting
-        if (action.command === 'formatBlock') {
-            // Handle block formatting specially
-            document.execCommand('formatBlock', false, action.value);
-        } else {
-            document.execCommand(action.command, false, action.value || '');
-        }
-
-        // Update content in state
-        if (editorRef.current) {
-            setPost(prev => ({ ...prev, content: editorRef.current?.innerHTML || '' }));
-        }
     };
 
     const openMediaLibrary = (mode: MediaInsertMode) => {
@@ -191,82 +214,132 @@ export default function NewPost() {
     };
 
     const handleMediaSelect = (mediaUrl: string) => {
-        if (mediaInsertMode === 'featured') {
-            setPost(prev => ({ ...prev, featuredImage: mediaUrl }));
-        } else {
-            const img = `
-        <figure class="my-8">
-          <img 
-            src="${mediaUrl}" 
-            alt="Article image" 
-            class="w-full rounded-lg object-cover"
-            style="aspect-ratio: 16/9;"
-          />
-          <figcaption class="mt-2 text-center text-sm text-gray-500">
-            Click to add caption
-          </figcaption>
-        </figure>
-      `;
-
-            if (editorRef.current) {
-                const selection = window.getSelection();
-                if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = img;
-                    range.insertNode(tempDiv.firstChild as Node);
-                } else {
-                    editorRef.current.innerHTML += img;
-                }
-                // Update content in state
-                setPost(prev => ({ ...prev, content: editorRef.current?.innerHTML || '' }));
-            }
+        if (mediaInsertMode === "featured") {
+            setPost(prev => ({ ...prev, featuredImage: mediaUrl }))
         }
-
         setShowMediaLibrary(false);
     };
 
-    const handleEditorChange = () => {
-        if (editorRef.current) {
-            console.log("editorRef.current >> ", editorRef.current.innerHTML)
-            setPost(prev => ({ ...prev, content: editorRef.current?.innerHTML || '' }));
+    const handleSave = async (status: 'draft' | 'published') => {
+        const postToSave = { ...post, status };
+        delete postToSave.createdAt;
+        delete postToSave._id;
+        try {
+            const response = await axios.post(`${BACKEND_URL}/blogs`, postToSave, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+            console.log("Response is ", response.data)
+            toast.success("Post saved successfully")
+            navigate('/admin/posts');
+        } catch (err: any) {
+            const message = err?.response?.data?.error
+            if (message) {
+                toast.error(message)
+            } else {
+                toast.error("Error while saving the post")
+            }
+            console.log("Error while saving the post", err)
         }
+        console.log('Saving post:', postToSave);
+
     };
 
-    const handleSave = (status: 'draft' | 'published') => {
-        const postToSave = { ...post, status };
-        console.log('Saving post:', postToSave);
-        // Here you would typically make an API call to save the post
-        navigate('/posts');
-    };
+    const handleAuthorChange = (selectedOptions: { value: string; label: string }[]) => {
+        const selectedAuthors = selectedOptions.map((option: any) => option)
+        console.log("Selected Authors are ", selectedAuthors)
+        setPost(prev => ({ ...prev, authors: selectedAuthors }))
+    }
+
+    const handleTagChange = (selectedOptions: { value: string; label: string }[]) => {
+        const selectedTags = selectedOptions.map((option: any) => option)
+        setPost(prev => ({ ...prev, tags: selectedTags }))
+    }
+
+    async function postupdateHandler() {
+        try {
+            const response = await axios.put(`${BACKEND_URL}/blogs/${post._id}`, post, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+            const data = response.data
+            toast.success("Post updated successfully")
+            console.log("Response is ", data)
+        } catch (err: any) {
+            const message = err?.response?.data?.error
+            if (message) {
+                toast.error(message)
+            } else {
+                toast.error("Error while saving the post")
+            }
+            console.log("Error while updating the post", err)
+        }
+    }
+
+    console.log("Post is ", post.content)
+
+    function postStatusChangeHandler(val: boolean) {
+        if (val) {
+            setPost(prev => ({ ...prev, status: POST_STATUS.PUBLISHED }))
+        } else {
+            setPost(prev => ({ ...prev, status: POST_STATUS.DRAFT }))
+        }
+    }
 
     return (
         <div className="space-y-6">
+            <Toaster />
             <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-4">
                     <Link
-                        to="/posts"
+                        to="/admin/posts"
                         className="text-gray-500 hover:text-gray-700"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </Link>
                     <h1 className="text-2xl font-semibold text-gray-900">New Post</h1>
                 </div>
-                <div className="flex items-center space-x-3">
-                    <button
-                        onClick={() => handleSave('draft')}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                        Save as Draft
-                    </button>
-                    <button
-                        onClick={() => handleSave('published')}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        Publish
-                    </button>
-                </div>
+                {
+                    !isUpdate ? (
+                        <div className="flex items-center space-x-3">
+                            <button
+                                onClick={() => handleSave('draft')}
+                                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                                Save as Draft
+                            </button>
+                            <button
+                                onClick={() => handleSave('published')}
+                                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                                <Save className="h-4 w-4 mr-2" />
+                                Publish
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center space-x-3">
+
+                            {
+                                <div className='flex gap-3 font-semibold text-lg items-center'>
+                                    <span>{post.status === POST_STATUS.PUBLISHED ? "Published" : "Draft"}</span>
+                                    <Toggle initial={post.status === POST_STATUS.DRAFT ? false : true} onChange={postStatusChangeHandler} />
+                                </div>
+                            }
+                            <button
+                                onClick={postupdateHandler}
+                                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                                <Save className="h-4 w-4 mr-2" />
+                                Update
+                            </button>
+                        </div>
+                    )
+                }
+
             </div>
 
             <div className="grid grid-cols-3 gap-6">
@@ -283,7 +356,6 @@ export default function NewPost() {
                                     name="title"
                                     value={post.title}
                                     onChange={handleInputChange}
-                                    onBlur={generateSlug}
                                     className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     placeholder="Enter post title"
                                 />
@@ -316,15 +388,15 @@ export default function NewPost() {
                                             className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                         >
                                             <Image className="h-4 w-4 mr-2" />
-                                            Add Media 
+                                            Add Media
                                         </button>
-                                        <button
+                                        {/* <button
                                             type="button"
                                             className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                         >
                                             <Link2 className="h-4 w-4 mr-2" />
                                             Add Link data
-                                        </button>
+                                        </button> */}
                                     </div>
                                 </div>
                                 <div className="border border-gray-300 rounded-md">
@@ -366,17 +438,17 @@ export default function NewPost() {
                             </div>
 
                             <div>
-                                <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700">
-                                    Excerpt
+                                <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                                    description
                                 </label>
                                 <textarea
-                                    id="excerpt"
-                                    name="excerpt"
+                                    id="description"
+                                    name="description"
                                     rows={3}
-                                    value={post.excerpt}
+                                    value={post.description}
                                     onChange={handleInputChange}
                                     className="mt-1 block p-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    placeholder="Write a brief excerpt..."
+                                    placeholder="Write a brief description..."
                                 />
                             </div>
                         </div>
@@ -416,144 +488,20 @@ export default function NewPost() {
                     </div>
 
                     <div className="bg-white shadow-sm rounded-lg p-6">
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Categories & Tags</h3>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">Authors & Tags</h3>
                         <div className="space-y-4">
-                            <div>
-                                <label htmlFor="categories" className="block text-sm font-medium text-gray-700">
-                                    Categories
-                                </label>
-                                <select
-                                    id="categories"
-                                    name="categories"
-                                    multiple
-                                    value={post.categories}
-                                    onChange={handleMultiSelect}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                >
-                                    {availableCategories.map(category => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </select>
+                            <div className='space-y-2'>
+                                <label >Authors</label>
+                                <MultiSelectCombobox selectedOptionsTags={post.authors} options={allAuthors} placeholder="Select Author..." onChange={handleAuthorChange} />
                             </div>
-                            <div>
-                                <label htmlFor="tags" className="block text-sm font-medium text-gray-700">
-                                    Tags
-                                </label>
-                                <select
-                                    id="tags"
-                                    name="tags"
-                                    multiple
-                                    value={post.tags}
-                                    onChange={handleMultiSelect}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                >
-                                    {availableTags.map(tag => (
-                                        <option key={tag.id} value={tag.id}>
-                                            {tag.name}
-                                        </option>
-                                    ))}
-                                </select>
+
+                            <div className='space-y-2'>
+                                <label >Tags</label>
+                                <MultiSelectCombobox selectedOptionsTags={post.tags} options={allTags} placeholder="Select Tags..." onChange={handleTagChange} />
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white shadow-sm rounded-lg p-6">
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Author Information</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="authorName" className="block text-sm font-medium text-gray-700">
-                                    Author Name
-                                </label>
-                                <input
-                                    type="text"
-                                    id="authorName"
-                                    name="authorName"
-                                    value={post.author?.name || ''}
-                                    onChange={(e) => setPost(prev => ({
-                                        ...prev,
-                                        author: {
-                                            ...prev.author,
-                                            name: e.target.value
-                                        }
-                                    }))}
-                                    className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    placeholder="Enter author name"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Social Links
-                                </label>
-                                <div className="space-y-3">
-                                    <div className="flex items-center space-x-2">
-                                        <span className="text-gray-500">
-                                            <Twitter className="h-5 w-5" />
-                                        </span>
-                                        <input
-                                            type="url"
-                                            value={post.author?.socials?.twitter || ''}
-                                            onChange={(e) => setPost(prev => ({
-                                                ...prev,
-                                                author: {
-                                                    ...prev.author,
-                                                    socials: {
-                                                        ...prev.author?.socials,
-                                                        twitter: e.target.value
-                                                    }
-                                                }
-                                            }))}
-                                            className="flex-1 p-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                            placeholder="Twitter profile URL"
-                                        />
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <span className="text-gray-500">
-                                            <Linkedin className="h-5 w-5" />
-                                        </span>
-                                        <input
-                                            type="url"
-                                            value={post.author?.socials?.linkedin || ''}
-                                            onChange={(e) => setPost(prev => ({
-                                                ...prev,
-                                                author: {
-                                                    ...prev.author,
-                                                    socials: {
-                                                        ...prev.author?.socials,
-                                                        linkedin: e.target.value
-                                                    }
-                                                }
-                                            }))}
-                                            className="flex-1 p-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                            placeholder="LinkedIn profile URL"
-                                        />
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <span className="text-gray-500">
-                                            <Globe className="h-5 w-5" />
-                                        </span>
-                                        <input
-                                            type="url"
-                                            value={post.author?.socials?.website || ''}
-                                            onChange={(e) => setPost(prev => ({
-                                                ...prev,
-                                                author: {
-                                                    ...prev.author,
-                                                    socials: {
-                                                        ...prev.author?.socials,
-                                                        website: e.target.value
-                                                    }
-                                                }
-                                            }))}
-                                            className="flex-1 p-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                            placeholder="Personal website URL"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <div className="bg-white shadow-sm rounded-lg p-6">
                         <h3 className="text-lg font-medium text-gray-900 mb-4">SEO Settings</h3>
@@ -613,9 +561,9 @@ export default function NewPost() {
                                             </button>
                                         </div>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                                            {sampleMediaItems.map((item) => (
+                                            {mediaItems.map((item) => (
                                                 <button
-                                                    key={item.id}
+                                                    key={item._id}
                                                     onClick={() => handleMediaSelect(item.url)}
                                                     className="group relative"
                                                 >
@@ -634,14 +582,14 @@ export default function NewPost() {
                                                     </div>
                                                 </button>
                                             ))}
-                                            <button
+                                            {/* <button
                                                 className="flex aspect-video w-full items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-600"
                                             >
                                                 <div className="text-center">
                                                     <Plus className="mx-auto h-8 w-8" />
                                                     <span className="mt-1 block text-sm font-medium">Upload New</span>
                                                 </div>
-                                            </button>
+                                            </button> */}
                                         </div>
                                     </div>
                                 </div>

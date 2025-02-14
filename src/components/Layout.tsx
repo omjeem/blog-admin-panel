@@ -22,37 +22,36 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
     {
       title: 'Dashboard',
       icon: <LayoutDashboard className="w-5 h-5" />,
-      path: '/',
+      path: '/admin',
     },
     {
       title: 'Posts',
       icon: <FileText className="w-5 h-5" />,
       path: '/posts',
       submenu: [
-        { title: 'All Posts', path: '/posts' },
-        { title: 'Add New', path: '/posts/new' },
-        { title: 'Categories', path: '/posts/categories' },
+        { title: 'All Posts', path: '/admin/posts' },
+        { title: 'Add New', path: '/admin/posts/new' },
       ],
     },
     {
       title: 'Media',
       icon: <Image className="w-5 h-5" />,
-      path: '/media',
+      path: '/admin/media',
     },
     {
       title: 'Tags',
       icon: <Tags className="w-5 h-5" />,
-      path: '/tags',
+      path: '/admin/tags',
     },
     {
       title: 'Users',
       icon: <Users className="w-5 h-5" />,
-      path: '/users',
+      path: '/admin/users',
     },
     {
       title: 'Settings',
       icon: <Settings className="w-5 h-5" />,
-      path: '/settings',
+      path: '/admin/settings',
     },
   ];
 

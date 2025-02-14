@@ -3,6 +3,7 @@
 import ReactQuill from "react-quill-new";
 import React, { useEffect } from "react";
 import "react-quill-new/dist/quill.snow.css";
+import NewPost from "../../pages/posts/NewPost";
 
 
 interface RichTextEditorProps {
@@ -61,7 +62,6 @@ const modules = {
       image: function (this: any) {
         const quill = this.quill;
         const range = quill.getSelection();
-
         const url = prompt("Enter image URL:");
         if (url) {
           quill.insertEmbed(range.index, "image", url);

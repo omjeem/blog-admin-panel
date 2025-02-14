@@ -13,7 +13,7 @@ export interface Post {
   status: 'published' | 'draft';
   category: string;
   content: string;
-  excerpt?: string;
+  description?: string;
   featuredImage?: string;
   seo?: {
     title?: string;
@@ -45,21 +45,19 @@ export interface Tag {
   _id: string;
   name: string;
   slug: string;
-  blogs?: number;
+  blogs?: [number];
   isPrimary?: boolean;
 }
 
 export interface MediaItem {
-  id: string;
+  _id: string;
   url: string;
-  type: 'image' | 'video' | 'document';
+  type: 'image' | 'document' | 'video';
   title: string;
   altText?: string;
-  uploadDate: string;
+  uploadedAt: string;
   size?: string;
   dimensions?: string;
-  fileType?: string;
-  uploadedBy?: string;
 }
 
 export interface SiteSettings {

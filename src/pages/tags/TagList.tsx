@@ -21,24 +21,28 @@ export default function TagList() {
   const [tags, setTags] = useState<Tag[]>(initialTags);
   const [showForm, setShowForm] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
-  const [newTag, setNewTag] = useState<Partial<Tag>>({
+  const [newTag, setNewTag] = useState({
+    _id: '',
     name: '',
     slug: ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setNewTag(prev => ({ ...prev, [name]: value }));
+    const slug = generateSlug(value);
+    setNewTag(prev => ({
+      ...prev,
+      [name]: value,
+      slug
+    }));
   };
 
-  const generateSlug = () => {
-    if (newTag.name) {
-      const slug = newTag.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-      setNewTag(prev => ({ ...prev, slug }));
-    }
+  const generateSlug = (name: string) => {
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    return slug;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -61,7 +65,7 @@ export default function TagList() {
       //   }
       // ]);
     }
-    setNewTag({ name: '', slug: '' });
+    setNewTag({ _id: "", name: '', slug: '' });
     setShowForm(false);
     setEditingTag(null);
   };
@@ -72,9 +76,21 @@ export default function TagList() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this tag?')) {
-      setTags(prev => prev.filter(tag => tag._id !== id));
+      try {
+        const token = localStorage.getItem('token')
+        const response = await axios.delete(`${BACKEND_URL}/tags/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        })
+        console.log("Response is ", response)
+        setTags(prev => prev.filter(tag => tag._id !== id));
+
+      } catch (error) {
+        console.log("Error is ", error)
+      }
     }
   };
 
@@ -89,16 +105,49 @@ export default function TagList() {
     fetchTags()
   }, [])
 
+  function addNewTagHandler() {
+    setShowForm(true);
+    setEditingTag(null);
+    setNewTag({ _id: "", name: '', slug: '' });
+  }
+
+  async function handelUpdateOrCreate() {
+    const token = localStorage.getItem('token')
+    if (editingTag) {
+      const response = await axios.put(`${BACKEND_URL}/tags/${newTag._id}`, {
+        name: newTag.name,
+        slug: newTag.slug
+      }, {
+        headers: {
+          "application-type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      })
+      const data = response.data.response
+      console.log("data is ", data)
+    } else {
+      const response = await axios.post(`${BACKEND_URL}/tags`, {
+        name: newTag.name,
+        slug: newTag.slug
+      }, {
+        headers: {
+          "content-type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      })
+      const data = response.data.response
+      setTags(prev => [...prev, data])
+    }
+  }
+
+  console.log("new tag is ", newTag)
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Tags</h1>
         <button
-          onClick={() => {
-            setShowForm(true);
-            setEditingTag(null);
-            setNewTag({ name: '', slug: '' });
-          }}
+          onClick={addNewTagHandler}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -122,7 +171,7 @@ export default function TagList() {
                 name="name"
                 value={newTag.name}
                 onChange={handleInputChange}
-                onBlur={generateSlug}
+                // onBlur={generateSlug}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 required
               />
@@ -153,6 +202,7 @@ export default function TagList() {
                 Cancel
               </button>
               <button
+                onClick={handelUpdateOrCreate}
                 type="submit"
                 className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
@@ -174,6 +224,9 @@ export default function TagList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Slug
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Blogs
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -188,7 +241,10 @@ export default function TagList() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{tag.slug || newTag.name?.toLowerCase()}</div>
+                    <div className="text-sm text-gray-500">{tag.slug || tag.name?.toLowerCase()}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-500">{tag.blogs?.length || 0}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">

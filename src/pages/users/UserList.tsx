@@ -1,31 +1,89 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Edit, Trash2, Plus, Shield, Search, Filter, X, Mail, Key } from 'lucide-react';
 import type { User } from '../../types';
+import axios from 'axios';
+import { BACKEND_URL } from '../../utils';
 
-const users: User[] = [
-  {
-    id: '1',
-    username: 'johndoe',
-    email: 'john@example.com',
-    role: 'admin',
-    status: 'active',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    lastLogin: '2024-03-10T15:30:00Z',
-    createdAt: '2024-01-01T00:00:00Z',
-    permissions: ['manage_users', 'manage_posts', 'manage_settings']
-  },
-  {
-    id: '2',
-    username: 'janesmith',
-    email: 'jane@example.com',
-    role: 'editor',
-    status: 'active',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    lastLogin: '2024-03-09T10:15:00Z',
-    createdAt: '2024-01-15T00:00:00Z',
-    permissions: ['manage_posts']
-  }
-];
+// const users: User[] = [
+//   {
+//     id: '1',
+//     username: 'johndoe',
+//     email: 'john@example.com',
+//     role: 'admin',
+//     status: 'active',
+//     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+//     lastLogin: '2024-03-10T15:30:00Z',
+//     createdAt: '2024-01-01T00:00:00Z',
+//     permissions: ['manage_users', 'manage_posts', 'manage_settings']
+//   },
+//   {
+//     id: '2',
+//     username: 'janesmith',
+//     email: 'jane@example.com',
+//     role: 'editor',
+//     status: 'active',
+//     avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+//     lastLogin: '2024-03-09T10:15:00Z',
+//     createdAt: '2024-01-15T00:00:00Z',
+//     permissions: ['manage_posts']
+//   }
+// ];
+
+export enum USER_ROLE {
+  ADMIN = "admin",
+  USER = "user",
+  EDITOR = "editor"
+}
+
+export enum USER_STATUS {
+  ACTIVE = "active",
+  INACTIVE = "inactive"
+}
+
+interface UserData {
+  _id: string;
+  name: string;
+  username: string;
+  email: string;
+  type: USER_ROLE;
+  status : USER_STATUS;
+  blogs: string[];
+  createdAt: string;
+}
+
+// const users: UserData[] = [
+//   {
+//     _id: "67ae39aea249b3843f335bfa",
+//     name: "Om",
+//     username: "om",
+//     status: USER_STATUS.ACTIVE,
+//     email: "astrix-admin@gmail.com",
+//     type: USER_ROLE.USER,
+//     blogs: [],
+//     createdAt: "2025-02-13T18:27:58.959Z"
+//   },
+//   {
+//     _id: "67ae3a8ba774112d0708a6d9",
+//     name: "Om Mihra",
+//     status: USER_STATUS.ACTIVE,
+//     username: "om-jee",
+//     email: "om@gmail.com",
+//     type:USER_ROLE.USER,
+//     blogs: [],
+//     createdAt: "2025-02-13T18:31:39.830Z",
+
+//   },
+//   {
+//     _id: "67ae3aa0a774112d0708a6db",
+//     name: "Ishu Mihra",
+//     username: "ishu",
+//     status: USER_STATUS.ACTIVE,
+//     email: "ishu@gmail.com",
+//     type: USER_ROLE.USER,
+//     blogs: [],
+//     createdAt: "2025-02-13T18:32:00.767Z",
+//   }
+// ]
 
 interface UserFilter {
   search: string;
@@ -34,6 +92,7 @@ interface UserFilter {
 }
 
 export default function UserList() {
+  const [users, setUsers] = useState<UserData[]>([]);
   const [filter, setFilter] = useState<UserFilter>({
     search: '',
     role: 'all',
@@ -41,22 +100,37 @@ export default function UserList() {
   });
   const [showNewUserModal, setShowNewUserModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = (
       user.username.toLowerCase().includes(filter.search.toLowerCase()) ||
       user.email.toLowerCase().includes(filter.search.toLowerCase())
     );
-    const matchesRole = filter.role === 'all' || user.role === filter.role;
+    const matchesRole = filter.role === 'all' || user.type === filter.role;
     const matchesStatus = filter.status === 'all' || user.status === filter.status;
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: UserData) => {
     setEditingUser(user);
     setShowEditModal(true);
   };
+
+  async function fetchAllUsers() {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/authors`);
+      const data = response.data.response
+      setUsers(data);
+      console.log("Fetched users", data);
+    } catch (err) {
+      console.log("Error while fetching users", err);
+    }
+  }
+
+  useEffect(() => {
+    fetchAllUsers()
+  }, [])
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this user?')) {
@@ -74,16 +148,16 @@ export default function UserList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Users</h1>
-        <button
+        {/* <button
           onClick={() => setShowNewUserModal(true)}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add User
-        </button>
+        </button> */}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      {/* <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
@@ -118,7 +192,7 @@ export default function UserList() {
             <option value="inactive">Inactive</option>
           </select>
         </div>
-      </div>
+      </div> */}
 
       <div className="bg-white shadow-sm rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
@@ -138,19 +212,19 @@ export default function UserList() {
                   Last Login
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                   Blogs
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr key={user._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="h-10 w-10 flex-shrink-0">
                         <img
                           className="h-10 w-10 rounded-full"
-                          src={user.avatar || `https://ui-avatars.com/api/?name=${user.username}&background=random`}
+                          src={`https://ui-avatars.com/api/?name=${user.username}&background=random`}
                           alt=""
                         />
                       </div>
@@ -165,28 +239,27 @@ export default function UserList() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-500">
                       <Shield className="h-4 w-4 mr-1" />
-                      {user.role}
+                      {user.type}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status === 'active'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}>
                       {user.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">
-                      {user.lastLogin
-                        ? new Date(user.lastLogin).toLocaleDateString()
+                      {user.createdAt
+                        ? new Date(user.createdAt).toLocaleDateString()
                         : 'Never'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <button
+                      {/* <button
                         onClick={() => handleEdit(user)}
                         className="text-blue-600 hover:text-blue-900"
                         title="Edit User"
@@ -194,12 +267,13 @@ export default function UserList() {
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => handleDelete(user._id)}
                         className="text-red-600 hover:text-red-900"
                         title="Delete User"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </button> */}
+                      {user.blogs.length}
                     </div>
                   </td>
                 </tr>
@@ -369,7 +443,7 @@ export default function UserList() {
                         <select
                           id="role"
                           name="role"
-                          value={editingUser.role}
+                          value={editingUser.type}
                           onChange={(e) => {
                             setEditingUser(prev => ({
                               ...prev!,
