@@ -4,17 +4,6 @@ import { twMerge } from "tailwind-merge"
 import { Tag } from "../types"
 
 
-interface Option {
-    value: string
-    label: string
-}
-
-interface MultiSelectComboboxProps {
-    options: Option[]
-    placeholder?: string
-    onChange: (selectedOptions: Option[]) => void
-}
-
 export const MultiSelectCombobox: React.FC<any> = ({
     options,
     placeholder = "Select options...",

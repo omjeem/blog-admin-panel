@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Upload, Search, Filter, Image as ImageIcon, Film, FileText, Edit, Trash2, Plus, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Upload, Search, Filter, Image , Film, FileText, Edit, Trash2, Plus, X, Copy } from 'lucide-react';
 import type { MediaItem } from '../../types';
 import axios from 'axios';
 import { BACKEND_URL } from '../../utils';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface MediaFilter {
   search: string;
@@ -64,7 +65,7 @@ export default function MediaLibrary() {
     }
   });
 
-  function showMediaUpdateModel(){
+  function showMediaUpdateModel() {
     setNewMediaAltText("")
     setNewMediaTitle("")
     setNewMediaFile(null)
@@ -146,11 +147,11 @@ export default function MediaLibrary() {
   }
 
   async function fileUploadHandler() {
-    if(!newMediaFile){
+    if (!newMediaFile) {
       alert("Please select a file to upload")
       return
     }
-    if(!newMediaTitle || newMediaTitle.trim() === "" || !newMediaAltText || newMediaAltText.trim() === ""){
+    if (!newMediaTitle || newMediaTitle.trim() === "" || !newMediaAltText || newMediaAltText.trim() === "") {
       alert("Please enter a title and alt text")
       return
     }
@@ -158,7 +159,7 @@ export default function MediaLibrary() {
     formData.append('image', newMediaFile)
     formData.append('title', newMediaTitle)
     formData.append('altText', newMediaAltText)
-    try{
+    try {
       const response = await axios.post(`${BACKEND_URL}/image/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -168,15 +169,21 @@ export default function MediaLibrary() {
       const fileResponseData = response.data.data
       console.log("File uploaded successfully", fileResponseData)
       setMediaImages(prev => [...prev, fileResponseData])
-    }catch(Err : any){
+    } catch (Err: any) {
       console.log("Error while uploading file", Err)
-    }finally{
+    } finally {
       setShowUploadModal(false)
     }
   }
 
+  function onCopyHandler(url: string) {
+    navigator.clipboard.writeText(url)
+    toast.success("Copied to clipboard")
+  }
+
   return (
     <div className="space-y-6">
+      <Toaster />
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Media Library</h1>
         <div className="flex space-x-3">
@@ -273,6 +280,12 @@ export default function MediaLibrary() {
                       className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-100"
                     >
                       <Trash2 className="h-4 w-4 text-red-600" />
+                    </button>
+                    <button
+                      onClick={() => onCopyHandler(item.url)}
+                      className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-100"
+                    >
+                      <Copy className="h-4 w-4 text-red-600" />
                     </button>
                   </div>
                 </div>

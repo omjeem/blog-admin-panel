@@ -1,30 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Save,
     Image,
-    Link2,
-    Eye,
     ArrowLeft,
-    Bold,
-    Italic,
-    Heading1,
-    Heading2,
-    List,
-    ListOrdered,
-    AlignLeft,
-    AlignCenter,
-    AlignRight,
-    Quote,
-    Code,
-    Undo,
-    Redo,
-    Plus,
     X,
-    Twitter,
-    Linkedin,
-    Globe
 } from 'lucide-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import RichTextEditor from '../../components/Editor/TextEditor';
 import axios from 'axios';
 import { BACKEND_URL } from '../../utils';
@@ -177,14 +158,7 @@ export default function NewPost() {
         }
     };
 
-    const handleMultiSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const { name, options } = e.target;
-        const values = Array.from(options)
-            .filter(option => option.selected)
-            .map(option => option.value);
-        setPost(prev => ({ ...prev, [name]: values }));
-    };
-
+ 
     async function fetchMediaImages() {
         try {
             const response = await axios.get(`${BACKEND_URL}/image`)

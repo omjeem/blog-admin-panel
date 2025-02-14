@@ -1,7 +1,6 @@
-import { Edit, Eye, Trash2, Plus, Undo } from 'lucide-react';
+import { Edit, Trash2, Plus, Undo } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import type { Post } from '../../types';
-import { POST_STATUS, PostForm } from './NewPost';
+import {  PostForm } from './NewPost';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { BACKEND_URL } from '../../utils';
