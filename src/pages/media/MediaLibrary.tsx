@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Upload, Search, Filter, Image , Film, FileText, Edit, Trash2, Plus, X, Copy } from 'lucide-react';
+import { Upload, Search, Filter , Film, FileText, Edit, Trash2, Plus, X, Copy } from 'lucide-react';
 import type { MediaItem } from '../../types';
 import axios from 'axios';
 import { BACKEND_URL } from '../../utils';

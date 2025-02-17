@@ -3,7 +3,6 @@
 import ReactQuill from "react-quill-new";
 import React, { useEffect } from "react";
 import "react-quill-new/dist/quill.snow.css";
-import NewPost from "../../pages/posts/NewPost";
 
 
 interface RichTextEditorProps {
