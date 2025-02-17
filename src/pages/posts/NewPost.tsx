@@ -4,6 +4,7 @@ import {
     Image,
     ArrowLeft,
     X,
+    Copy,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import RichTextEditor from '../../components/Editor/TextEditor';
@@ -99,7 +100,7 @@ export default function NewPost() {
             console.log("Post ID is ", postId)
             try {
                 const response = await axios.get(`${BACKEND_URL}/blogs/${postId}`, {
-                    headers : {
+                    headers: {
                         "Authorization": `Bearer ${localStorage.getItem('token')}`
                     }
                 })
@@ -158,7 +159,7 @@ export default function NewPost() {
         }
     };
 
- 
+
     async function fetchMediaImages() {
         try {
             const response = await axios.get(`${BACKEND_URL}/image`)
@@ -188,11 +189,21 @@ export default function NewPost() {
     };
 
     const handleMediaSelect = (mediaUrl: string) => {
+        console.log('media insert mode >>>>> ', mediaInsertMode);
         if (mediaInsertMode === "featured") {
             setPost(prev => ({ ...prev, featuredImage: mediaUrl }))
         }
+        if (mediaInsertMode === "content") {
+
+        }
         setShowMediaLibrary(false);
     };
+
+    function onCopyHandler(url: string) {
+        navigator.clipboard.writeText(url)
+        toast.success("Copied to clipboard")
+    }
+
 
     const handleSave = async (status: 'draft' | 'published') => {
         const postToSave = { ...post, status };
@@ -541,12 +552,29 @@ export default function NewPost() {
                                                     onClick={() => handleMediaSelect(item.url)}
                                                     className="group relative"
                                                 >
-                                                    <div className="aspect-video w-full overflow-hidden rounded-lg">
+                                                    <div className="aspect-video relative w-full overflow-hidden rounded-lg">
                                                         <img
                                                             src={item.url}
                                                             alt={item.title}
                                                             className="h-full w-full object-cover transition-transform group-hover:scale-105"
                                                         />
+                                                        {
+                                                            mediaInsertMode === "content" && (
+                                                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity">
+                                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                        <div className="flex space-x-2">
+                                                                            <button
+                                                                                onClick={() => onCopyHandler(item.url)}
+                                                                                className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-100"
+                                                                            >
+                                                                                <Copy className="h-4 w-4 text-red-600" />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )
+                                                        }
+
                                                     </div>
                                                     <div className="mt-2 flex items-start justify-between">
                                                         <div className="text-left">
