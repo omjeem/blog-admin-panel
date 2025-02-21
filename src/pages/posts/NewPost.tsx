@@ -275,6 +275,10 @@ export default function NewPost() {
         }
     }
 
+    function handlePostFeaturedStatus(val: boolean) {
+        setPost(prev => ({ ...prev, isFeatured: val }))
+    }
+
     return (
         <div className="space-y-6">
             <Toaster />
@@ -288,6 +292,12 @@ export default function NewPost() {
                     </Link>
                     <h1 className="text-2xl font-semibold text-gray-900">New Post</h1>
                 </div>
+                {
+                    <div className='flex gap-3 font-semibold text-lg items-center'>
+                        <span>{post.isFeatured ? "Featured" : "Not Featured"}</span>
+                        <Toggle initial={post.isFeatured} onChange={handlePostFeaturedStatus} />
+                    </div>
+                }
                 {
                     !isUpdate ? (
                         <div className="flex items-center space-x-3">
