@@ -5,6 +5,7 @@ import {
     ArrowLeft,
     X,
     Copy,
+    Plus,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import RichTextEditor from '../../components/Editor/TextEditor';
@@ -14,6 +15,7 @@ import { MediaItem } from '../../types';
 import { MultiSelectCombobox } from '../../components/MultiSelectComboBox';
 import toast, { Toaster } from 'react-hot-toast';
 import Toggle from '../../components/Toggle';
+import UploadModal from '../../components/UploadModal';
 
 export enum POST_STATUS {
     PUBLISHED = "published",
@@ -92,6 +94,7 @@ export default function NewPost() {
     const [allAuthors, setAllAuthors] = useState<string[]>([]);
     const [allTags, setAllTags] = useState<string[]>([]);
 
+    const [showUploadModal, setShowUploadModal] = useState(false)
 
     async function fetchPostDetails() {
         const url = window.location.href;
@@ -279,9 +282,15 @@ export default function NewPost() {
         setPost(prev => ({ ...prev, isFeatured: val }))
     }
 
+    function showMediaUpdateModel() {
+        setShowUploadModal(true)
+    }
     return (
         <div className="space-y-6">
             <Toaster />
+            {showUploadModal && (
+                <UploadModal setShowUploadModal={setShowUploadModal} setMediaImages={setMediaItems} />
+            )}
             <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-4">
                     <Link
@@ -594,14 +603,15 @@ export default function NewPost() {
                                                     </div>
                                                 </button>
                                             ))}
-                                            {/* <button
-                                                className="flex aspect-video w-full items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-600"
+                                            <button
+                                                onClick={showMediaUpdateModel}
+                                                className="flex aspect-video items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-600"
                                             >
                                                 <div className="text-center">
                                                     <Plus className="mx-auto h-8 w-8" />
-                                                    <span className="mt-1 block text-sm font-medium">Upload New</span>
+                                                    <span className="mt-2 block text-sm font-medium">Upload New</span>
                                                 </div>
-                                            </button> */}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

@@ -1,33 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { Edit, Trash2, Plus, Shield, Search, Filter, X, Mail, Key } from 'lucide-react';
-import type { User } from '../../types';
+import { useEffect, useState } from 'react';
+import { Plus, Shield, X } from 'lucide-react';
 import axios from 'axios';
 import { BACKEND_URL } from '../../utils';
+import toast, { Toaster } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
-// const users: User[] = [
-//   {
-//     id: '1',
-//     username: 'johndoe',
-//     email: 'john@example.com',
-//     role: 'admin',
-//     status: 'active',
-//     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-//     lastLogin: '2024-03-10T15:30:00Z',
-//     createdAt: '2024-01-01T00:00:00Z',
-//     permissions: ['manage_users', 'manage_posts', 'manage_settings']
-//   },
-//   {
-//     id: '2',
-//     username: 'janesmith',
-//     email: 'jane@example.com',
-//     role: 'editor',
-//     status: 'active',
-//     avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-//     lastLogin: '2024-03-09T10:15:00Z',
-//     createdAt: '2024-01-15T00:00:00Z',
-//     permissions: ['manage_posts']
-//   }
-// ];
 
 export enum USER_ROLE {
   ADMIN = "admin",
@@ -46,44 +23,12 @@ interface UserData {
   username: string;
   email: string;
   type: USER_ROLE;
-  status : USER_STATUS;
+  status: USER_STATUS;
   blogs: string[];
   createdAt: string;
 }
 
-// const users: UserData[] = [
-//   {
-//     _id: "67ae39aea249b3843f335bfa",
-//     name: "Om",
-//     username: "om",
-//     status: USER_STATUS.ACTIVE,
-//     email: "astrix-admin@gmail.com",
-//     type: USER_ROLE.USER,
-//     blogs: [],
-//     createdAt: "2025-02-13T18:27:58.959Z"
-//   },
-//   {
-//     _id: "67ae3a8ba774112d0708a6d9",
-//     name: "Om Mihra",
-//     status: USER_STATUS.ACTIVE,
-//     username: "om-jee",
-//     email: "om@gmail.com",
-//     type:USER_ROLE.USER,
-//     blogs: [],
-//     createdAt: "2025-02-13T18:31:39.830Z",
 
-//   },
-//   {
-//     _id: "67ae3aa0a774112d0708a6db",
-//     name: "Ishu Mihra",
-//     username: "ishu",
-//     status: USER_STATUS.ACTIVE,
-//     email: "ishu@gmail.com",
-//     type: USER_ROLE.USER,
-//     blogs: [],
-//     createdAt: "2025-02-13T18:32:00.767Z",
-//   }
-// ]
 
 interface UserFilter {
   search: string;
@@ -101,6 +46,67 @@ export default function UserList() {
   const [showNewUserModal, setShowNewUserModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
+
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [userRole, setUserRole] = useState("admin")
+
+  const navigate = useNavigate()
+
+  async function addNewuser() {
+    setName("")
+    setEmail("")
+    setUsername("")
+    setPassword("")
+    setShowNewUserModal(true)
+  }
+
+  async function createNewUser() {
+    if (!name || !email || !username || !password || !userRole) {
+      toast.error("All fields are required")
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        toast.error("Please logged in first")
+        navigate("/")
+        return;
+      }
+      const userObject = {
+        name,
+        email,
+        username,
+        password,
+        type: userRole
+      }
+      const response = await axios.post(`${BACKEND_URL}/auth/signup`, userObject, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const userData = response.data.response
+      console.log("User data is ", userData)
+      fetchAllUsers()
+      setShowNewUserModal(false);
+    } catch (err: any) {
+      const message = err?.response?.data?.error
+      if (message) {
+        toast.error(message)
+      } else {
+        toast.error("Error while adding new user")
+      }
+      console.log("Error in adding user", err)
+    }
+
+
+
+  }
+
+
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = (
@@ -146,15 +152,16 @@ export default function UserList() {
 
   return (
     <div className="space-y-6">
+      <Toaster />
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Users</h1>
-        {/* <button
-          onClick={() => setShowNewUserModal(true)}
+        <button
+          onClick={addNewuser}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add User
-        </button> */}
+        </button>
       </div>
 
       {/* <div className="flex flex-col sm:flex-row gap-4">
@@ -212,7 +219,7 @@ export default function UserList() {
                   Last Login
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                   Blogs
+                  Blogs
                 </th>
               </tr>
             </thead>
@@ -313,11 +320,49 @@ export default function UserList() {
                         </label>
                         <div className="mt-1">
                           <input
-                            type="email"
-                            name="email"
-                            id="email"
-                            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
                             placeholder="user@example.com"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                          Name
+                        </label>
+                        <div className="mt-1">
+                          <input
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                            placeholder="John Deo"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                          Username
+                        </label>
+                        <div className="mt-1">
+                          <input
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                            placeholder="john"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                          Password
+                        </label>
+                        <div className="mt-1">
+                          <input
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                            placeholder="Enter Password"
                           />
                         </div>
                       </div>
@@ -326,16 +371,15 @@ export default function UserList() {
                           Role
                         </label>
                         <select
-                          id="role"
-                          name="role"
-                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                          onChange={(e) => setUserRole(e.target.value)}
+                          className="mt-1  block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
                         >
+                          <option value="admin">Admin</option>
                           <option value="author">Author</option>
                           <option value="editor">Editor</option>
-                          <option value="admin">Admin</option>
                         </select>
                       </div>
-                      <div className="flex items-center justify-between">
+                      {/* <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <input
                             id="send-invitation"
@@ -347,16 +391,13 @@ export default function UserList() {
                             Send invitation email
                           </label>
                         </div>
-                      </div>
+                      </div> */}
                     </div>
                     <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
                       <button
                         type="button"
                         className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
-                        onClick={() => {
-                          // Handle user creation
-                          setShowNewUserModal(false);
-                        }}
+                        onClick={createNewUser}
                       >
                         Add User
                       </button>
