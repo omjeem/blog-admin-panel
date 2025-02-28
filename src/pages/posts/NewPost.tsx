@@ -455,7 +455,7 @@ export default function NewPost() {
 
                             <div>
                                 <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                                    description
+                                    By-Line
                                 </label>
                                 <textarea
                                     id="description"
