@@ -33,6 +33,7 @@ export interface PostForm {
     status: POST_STATUS;
     views: number;
     isFeatured: boolean;
+    isListicles : boolean;
     likeCount: number;
     dislikeCount: number;
     createdAt?: Date | null;
@@ -68,6 +69,7 @@ const initialPost: PostForm = {
     featuredImage: '',
     content: '',
     status: POST_STATUS.DRAFT,
+    isListicles : false,
     views: 0,
     isFeatured: false,
     likeCount: 0,
@@ -282,6 +284,10 @@ export default function NewPost() {
         setPost(prev => ({ ...prev, isFeatured: val }))
     }
 
+    function handlePostListiclesStatus(val: boolean) {
+        setPost(prev => ({ ...prev, isListicles: val }))
+    }
+
     function showMediaUpdateModel() {
         setShowUploadModal(true)
     }
@@ -305,6 +311,12 @@ export default function NewPost() {
                     <div className='flex gap-3 font-semibold text-lg items-center'>
                         <span>{post.isFeatured ? "Featured" : "Not Featured"}</span>
                         <Toggle initial={post.isFeatured} onChange={handlePostFeaturedStatus} />
+                    </div>
+                }
+                {
+                    <div className='flex gap-3 font-semibold text-lg items-center'>
+                        <span>{post.isListicles ? "Listicle" : "Not Listicle"}</span>
+                        <Toggle initial={post.isListicles} onChange={handlePostListiclesStatus} />
                     </div>
                 }
                 {
