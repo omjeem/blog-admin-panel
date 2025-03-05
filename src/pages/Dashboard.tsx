@@ -1,4 +1,4 @@
-import React from 'react';
+"use client"
 import { FileText, MessageSquare, Tags, Image } from 'lucide-react';
 import StatCard from '../components/Dashboard/StatCard';
 import RecentActivity from '../components/Dashboard/RecentActivity';
@@ -11,6 +11,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import axios from 'axios';
+import { BACKEND_URL } from '../utils';
+import { useEffect, useState } from 'react';
 
 const data = [
   { name: 'Jan', views: 4000, comments: 2400 },
@@ -21,31 +24,82 @@ const data = [
   { name: 'Jun', views: 2390, comments: 3800 },
 ];
 
-export default function Dashboard() {
+export interface MetaTitleInterface {
+  _id: String,
+  title: String,
+  createdAt: String,
+  description : String
+}
+interface MetaDataInterface {
+  posts: Number,
+  comments: Number,
+  tags: Number,
+  media: Number,
+  recent: MetaTitleInterface[]
+}
+
+const metaDataInitial: MetaDataInterface = {
+  posts: 156,
+  comments: 20,
+  tags: 50,
+  media: 100,
+  recent: [
+    {
+      _id: "1",
+      title: "Why The Boys TV Show Is Better Than the Comics",
+      createdAt: "2025-02-28T11:49:33.191Z",
+      description : "Dummy"
+    },
+    {
+      _id: "2",
+      title: "Megas XLR: The Gundam Love Letter We Didn’t Know We Needed",
+      createdAt: "2025-02-28T11:28:52.381Z",
+      description : "Dummy"
+    }
+  ]
+}
+
+function Dashboard() {
+  const [metaData, setMetaData] = useState<MetaDataInterface>(metaDataInitial)
+
+  async function fetchMetaData() {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/meta`)
+      const data = response.data
+      setMetaData(data)
+    } catch (err: any) {
+      console.log("Error while fetching details", err.message)
+    }
+  }
+
+  useEffect(() => {
+    fetchMetaData()
+  }, [])
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Posts"
-          value="156"
+          value={metaData.posts.toString()}
           icon={FileText}
           trend={{ value: 12, isPositive: true }}
         />
         <StatCard
           title="Comments"
-          value="2,345"
+          value={metaData.comments.toString()}
           icon={MessageSquare}
-          trend={{ value: 8, isPositive: true }}  
+          trend={{ value: 8, isPositive: true }}
         />
         <StatCard
           title="Authors & Tags"
-          value="48"
+          value={metaData.tags.toString()}
           icon={Tags}
           trend={{ value: 2, isPositive: true }}
         />
         <StatCard
           title="Media Files"
-          value="892"
+          value={metaData.media.toString()}
           icon={Image}
           trend={{ value: 5, isPositive: true }}
         />
@@ -77,8 +131,10 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
         </div>
-        <RecentActivity />
+        <RecentActivity activities={metaData.recent} />
       </div>
     </div>
   );
 }
+
+export default Dashboard;

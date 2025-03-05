@@ -1,34 +1,53 @@
 import React from 'react';
 import { FileText, MessageSquare, User } from 'lucide-react';
+import { MetaTitleInterface } from '../../pages/Dashboard';
 
-const activities = [
-  {
-    id: 1,
-    type: 'post',
-    title: 'New blog post published',
-    description: '"10 Tips for Better Writing" has been published',
-    time: '2 hours ago',
-    icon: FileText,
-  },
-  {
-    id: 2,
-    type: 'comment',
-    title: 'New comment received',
-    description: 'John Doe commented on "Getting Started with React"',
-    time: '4 hours ago',
-    icon: MessageSquare,
-  },
-  {
-    id: 3,
-    type: 'user',
-    title: 'New user registered',
-    description: 'Sarah Smith joined as an author',
-    time: '6 hours ago',
-    icon: User,
-  },
-];
+// const activities = [
+//   {
+//     id: 1,
+//     type: 'post',
+//     title: 'New blog post published',
+//     description: '"10 Tips for Better Writing" has been published',
+//     time: '2 hours ago',
+//     icon: FileText,
+//   },
+//   {
+//     id: 2,
+//     type: 'comment',
+//     title: 'New comment received',
+//     description: 'John Doe commented on "Getting Started with React"',
+//     time: '4 hours ago',
+//     icon: MessageSquare,
+//   },
+//   {
+//     id: 3,
+//     type: 'user',
+//     title: 'New user registered',
+//     description: 'Sarah Smith joined as an author',
+//     time: '6 hours ago',
+//     icon: User,
+//   },
+// ];
 
-export default function RecentActivity() {
+function timeAgo(timestamp: any) {
+  const now: any = new Date();
+  const createdAt: any = new Date(timestamp);
+  const diffInSeconds = Math.floor((now - createdAt) / 1000);
+
+  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} hours ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) return `${diffInDays} days ago`;
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) return `${diffInMonths} months ago`;
+  const diffInYears = Math.floor(diffInMonths / 12);
+  return `${diffInYears} years ago`;
+}
+
+export default function RecentActivity({ activities }: { activities: MetaTitleInterface[] }) {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-6">
@@ -36,9 +55,9 @@ export default function RecentActivity() {
         <div className="mt-6 flow-root">
           <ul className="-mb-8">
             {activities.map((activity, index) => {
-              const Icon = activity.icon;
+              const Icon = FileText;
               return (
-                <li key={activity.id}>
+                <li key={index}>
                   <div className="relative pb-8">
                     {index !== activities.length - 1 && (
                       <span
@@ -58,11 +77,11 @@ export default function RecentActivity() {
                             {activity.title}
                           </p>
                           <p className="mt-0.5 text-sm text-gray-500">
-                            {activity.description}
+                            {activity.description.length > 20 ? activity.description.substring(20) + "..." : activity.description}
                           </p>
                         </div>
                         <div className="whitespace-nowrap text-right text-sm text-gray-500">
-                          <time>{activity.time}</time>
+                          <time>{timeAgo(activity.createdAt)}</time>
                         </div>
                       </div>
                     </div>
